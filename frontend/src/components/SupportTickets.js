@@ -253,9 +253,13 @@ const SupportTickets = ({ onBack }) => {
                 <tbody>
                   {tickets.map(ticket => (
                     <tr key={ticket.id}>
-                      <td>
+                      {/* <td>
                         <code>{ticket.id.substring(0, 8)}...</code>
-                      </td>
+                      </td> */}
+                      <td>
+  <code>{ticket.ticket_number}</code>
+</td>
+                      
                       <td>
                         <strong>{ticket.subject}</strong>
                         <p className="text-muted mb-0 small">

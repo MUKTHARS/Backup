@@ -401,6 +401,7 @@ def get_user_tickets():
         for ticket in tickets:
             tickets_data.append({
                 'id': ticket.id,
+                'ticket_number': ticket.ticket_number,
                 'subject': ticket.subject,
                 'description': ticket.description,
                 'urgency': ticket.urgency,
@@ -473,7 +474,8 @@ def create_support_ticket():
         return jsonify({
             "success": True,
             "message": "Ticket created successfully",
-            "ticket_id": new_ticket.id
+            "ticket_id": new_ticket.id,
+            "ticket_number": new_ticket.ticket_number
         })
         
     except Exception as e:
@@ -495,6 +497,7 @@ def get_ticket_details(ticket_id):
         
         return jsonify({
             'id': ticket.id,
+            'ticket_number': ticket.ticket_number,
             'subject': ticket.subject,
             'description': ticket.description,
             'urgency': ticket.urgency,
