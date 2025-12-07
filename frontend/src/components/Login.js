@@ -65,17 +65,18 @@ const Login = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'https://tutomart.com/api/auth/login/google';
+    // LOCALHOST: Use local development URL
+    window.location.href = 'http://localhost:8080/api/auth/login/google';
   };  
   
-  // Show loading while checking auth status
-  if (authLoading) {
+  // Show minimal loading only for initial auth check
+  if (authLoading && !user) {
     return (
       <div className="premium-login-container">
         <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
           <div className="text-center">
             <div className="btn-spinner" style={{ width: '40px', height: '40px', margin: '0 auto 20px' }}></div>
-            <p>Checking authentication...</p>
+            <p>Loading application...</p>
           </div>
         </div>
       </div>

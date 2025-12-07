@@ -10,9 +10,13 @@ import os
 auth_bp = Blueprint("auth", __name__)
 oauth = OAuth()
 
-# Use your actual domain
-FRONTEND_BASE = "https://tutomart.com"
-CALLBACK_URL = "https://tutomart.com/api/auth/login/google/callback"  # Updated
+# PRODUCTION: Use your actual domain
+# FRONTEND_BASE = "https://tutomart.com"
+# CALLBACK_URL = "https://tutomart.com/api/auth/login/google/callback"
+
+# LOCALHOST: Use local development URLs
+FRONTEND_BASE = "http://localhost:3000"
+CALLBACK_URL = "http://localhost:8080/api/auth/login/google/callback"
 
 def init_oauth(app):
     oauth.init_app(app)
@@ -132,6 +136,7 @@ def google_callback():
 
 # -------------------------- TRADITIONAL LOGIN -----------------------------
 
+
 @auth_bp.route('/login/traditional', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def traditional_login():
@@ -146,28 +151,82 @@ def traditional_login():
         if not email or not password:
             return jsonify({"error": "Email and password required"}), 400
 
-        user = User.query.filter_by(email=email).first()
+        # FIX: Use db.session.query() instead of User.query
+        user = db.session.query(User).filter_by(email=email).first()
 
-        if not user or not user.password:
+        if not user:
             return jsonify({"error": "Invalid credentials"}), 401
+        
+        # Check if user has a password (might be Google-only user)
+        if not user.password:
+            return jsonify({"error": "Please use Google login for this account"}), 401
 
-        if not check_password_hash(user.password, password):
+        # Debug: Print password hash for testing
+        print(f"DEBUG: Checking password for {email}")
+        print(f"DEBUG: Stored hash: {user.password[:50]}...")
+        
+        # Check password
+        if check_password_hash(user.password, password):
+            login_user(user, remember=True)
+            
+            # Debug: Print login success
+            print(f"DEBUG: Login successful for {email}")
+            
+            return jsonify({
+                "message": "Login successful",
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email
+                }
+            })
+        else:
+            print(f"DEBUG: Password check failed for {email}")
             return jsonify({"error": "Invalid credentials"}), 401
-
-        login_user(user, remember=True)
-
-        return jsonify({
-            "message": "Login successful",
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email
-            }
-        })
 
     except Exception as e:
-        print("Login Error:", e)
+        print("Login Error:", str(e))
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": "Login failed"}), 500
+
+
+# @auth_bp.route('/login/traditional', methods=['POST'])
+# @cross_origin(supports_credentials=True)
+# def traditional_login():
+#     try:
+#         data = request.get_json()
+#         if not data:
+#             return jsonify({"error": "No data provided"}), 400
+
+#         email = data.get("email", "").strip()
+#         password = data.get("password", "").strip()
+
+#         if not email or not password:
+#             return jsonify({"error": "Email and password required"}), 400
+
+#         user = User.query.filter_by(email=email).first()
+
+#         if not user or not user.password:
+#             return jsonify({"error": "Invalid credentials"}), 401
+
+#         if not check_password_hash(user.password, password):
+#             return jsonify({"error": "Invalid credentials"}), 401
+
+#         login_user(user, remember=True)
+
+#         return jsonify({
+#             "message": "Login successful",
+#             "user": {
+#                 "id": user.id,
+#                 "name": user.name,
+#                 "email": user.email
+#             }
+#         })
+
+#     except Exception as e:
+#         print("Login Error:", e)
+#         return jsonify({"error": "Login failed"}), 500
 
 
 # -------------------------- REGISTRATION ----------------------------------
@@ -194,7 +253,8 @@ def register():
         if password != confirm:
             return jsonify({"error": "Passwords do not match"}), 400
 
-        if User.query.filter_by(email=email).first():
+        # FIX: Use db.session.query()
+        if db.session.query(User).filter_by(email=email).first():
             return jsonify({"error": "Email already exists"}), 400
 
         user = User(
@@ -223,11 +283,104 @@ def register():
         return jsonify({"error": "Registration failed"}), 500
 
 
+# @auth_bp.route('/register', methods=['POST'])
+# @cross_origin(supports_credentials=True)
+# def register():
+#     try:
+#         data = request.get_json()
+#         if not data:
+#             return jsonify({"error": "No data provided"}), 400
+
+#         email = data.get("email", "").strip()
+#         name = data.get("name", "").strip()
+#         password = data.get("password", "").strip()
+#         confirm = data.get("confirm_password", "").strip()
+
+#         if not all([email, name, password, confirm]):
+#             return jsonify({"error": "All fields required"}), 400
+
+#         if len(password) < 6:
+#             return jsonify({"error": "Password must be ≥ 6 chars"}), 400
+
+#         if password != confirm:
+#             return jsonify({"error": "Passwords do not match"}), 400
+
+#         if User.query.filter_by(email=email).first():
+#             return jsonify({"error": "Email already exists"}), 400
+
+#         user = User(
+#             email=email,
+#             name=name,
+#             password=generate_password_hash(password)
+#         )
+
+#         db.session.add(user)
+#         db.session.commit()
+
+#         login_user(user)
+
+#         return jsonify({
+#             "message": "Registration successful",
+#             "user": {
+#                 "id": user.id,
+#                 "name": user.name,
+#                 "email": user.email
+#             }
+#         })
+
+#     except Exception as e:
+#         print("Registration Error:", e)
+#         db.session.rollback()
+#         return jsonify({"error": "Registration failed"}), 500
+
+
 # -------------------------- LOGOUT ----------------------------------------
 
+# @auth_bp.route('/logout', methods=['POST'])
+# @login_required
+# @cross_origin(supports_credentials=True)
+# def logout():
+#     logout_user()
+#     return jsonify({"message": "Logged out successfully"})
+
 @auth_bp.route('/logout', methods=['POST'])
-@login_required
 @cross_origin(supports_credentials=True)
 def logout():
-    logout_user()
-    return jsonify({"message": "Logged out successfully"})
+    # FIX: Don't require login_required decorator
+    # If user is logged in, log them out
+    try:
+        logout_user()
+        return jsonify({"message": "Logged out successfully"})
+    except Exception:
+        # Even if there's an error, clear the session
+        return jsonify({"message": "Session cleared"})
+
+
+@auth_bp.route('/reset-password', methods=['POST'])
+@cross_origin(supports_credentials=True)
+def reset_password():
+    # TEMPORARY: For localhost testing only
+    try:
+        data = request.get_json()
+        email = data.get("email", "").strip()
+        new_password = data.get("password", "").strip()
+        
+        if not email or not new_password:
+            return jsonify({"error": "Email and password required"}), 400
+        
+        # FIX: Use db.session.query()
+        user = db.session.query(User).filter_by(email=email).first()
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        from werkzeug.security import generate_password_hash
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+        
+        return jsonify({"message": "Password reset successful"})
+        
+    except Exception as e:
+        print("Reset Password Error:", e)
+        db.session.rollback()
+        return jsonify({"error": "Failed to reset password"}), 500        

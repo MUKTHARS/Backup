@@ -2,6 +2,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime, timezone
 import uuid
+import json
+from sqlalchemy import func
 
 db = SQLAlchemy()
 
@@ -37,6 +39,23 @@ class SearchHistory(db.Model):
     
     user = db.relationship('User', backref=db.backref('searches', lazy=True))
 
+class SupportTicket(db.Model):
+    __tablename__ = 'support_tickets'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    subject = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    urgency = db.Column(db.String(20), nullable=False, default='medium')  # low, medium, high, critical
+    status = db.Column(db.String(20), nullable=False, default='open')  # open, in_progress, resolved, closed
+    attachment_paths = db.Column(db.JSON, default=list)  # Store list of file paths
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('tickets', lazy=True, cascade='all, delete-orphan'))
+
 def create_tables(app):
     with app.app_context():
         db.create_all()
+        print("Database tables created successfully!")

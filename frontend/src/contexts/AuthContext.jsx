@@ -1,4 +1,3 @@
-// src/contexts/AuthContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from '../utils/apiConfig';
 
@@ -11,13 +10,19 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
 
   // Add this useEffect to check auth status on component mount
   useEffect(() => {
-    checkAuthStatus();
-  }, []);
+    if (!initialCheckDone) {
+      checkAuthStatus();
+    }
+  }, [initialCheckDone]);
 
   const checkAuthStatus = async () => {
+    // Only check if we haven't done initial check
+    if (initialCheckDone) return;
+    
     try {
       const response = await api.get('/auth/login-status');
       
@@ -31,11 +36,13 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
     } finally {
       setLoading(false);
+      setInitialCheckDone(true);
     }
   };
 
   const login = async (email, password, remember) => {
     try {
+      setLoading(true);
       const response = await api.post('/auth/login/traditional', { 
         email, 
         password, 
@@ -43,8 +50,10 @@ export const AuthProvider = ({ children }) => {
       });
 
       setUser(response.data.user);
+      setLoading(false);
       return { success: true, message: response.data.message };
     } catch (error) {
+      setLoading(false);
       return {
         success: false,
         message: error.response?.data?.error || 'Login failed'
@@ -54,6 +63,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password, confirmPassword) => {
     try {
+      setLoading(true);
       const response = await api.post('/auth/register', { 
         name, 
         email, 
@@ -62,8 +72,10 @@ export const AuthProvider = ({ children }) => {
       });
 
       setUser(response.data.user);
+      setLoading(false);
       return { success: true, message: response.data.message };
     } catch (error) {
+      setLoading(false);
       return {
         success: false,
         message: error.response?.data?.error || 'Registration failed'
@@ -78,6 +90,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      setLoading(false);
     }
   };
 
@@ -92,7 +105,6 @@ export const AuthProvider = ({ children }) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
 
 // // src/contexts/AuthContext.jsx
 // import React, { createContext, useState, useContext, useEffect } from 'react';

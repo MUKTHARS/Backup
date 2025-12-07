@@ -1,9 +1,18 @@
 // src/utils/apiConfig.js
 import axios from 'axios';
 
-// Create axios instance with default config
+// PRODUCTION: Use production URL
+// const api = axios.create({
+//   baseURL: 'https://tutomart.com/api',
+//   withCredentials: true,
+//   headers: {
+//     'Content-Type': 'application/json'
+//   }
+// });
+
+// LOCALHOST: Use local development URL
 const api = axios.create({
-  baseURL: 'https://tutomart.com/api',
+  baseURL: 'http://localhost:8080/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
